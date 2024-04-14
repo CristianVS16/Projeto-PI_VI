@@ -6,8 +6,6 @@
 #include <LiquidCrystal_I2C.h>
 #include <Adafruit_PCF8574.h>
 
-
-
 #define PCF8574_ADDRESS 0x20 // endereço do PCF857 que controla os relés
 #define RELAY_ON 1
 #define RELAY_OFF 0
@@ -117,12 +115,12 @@ void loop() {
     lcd.print(":");
     lcd.print(" ");
     // Controla o relé baseado na leitura do sensor
-    if (valores_analogicos[x] < 45) {
+    if (valores_analogicos[x] < 40) {
       pcf.digitalWrite(x, RELAY_ON);// liga o relé com low
-      lcd.print("L"); // LIGADO para Ligado
+      lcd.print("LIGADO"); // LIGADO para Ligado
     } else if (valores_analogicos[x] >= 60) {
       pcf.digitalWrite(x, RELAY_OFF);//Desliga o relé com High
-      lcd.print("D"); //DESLIGADO para Desligado
+      lcd.print("DESLIG"); //DESLIGADO para Desligado
     }
 
     delay(1000);

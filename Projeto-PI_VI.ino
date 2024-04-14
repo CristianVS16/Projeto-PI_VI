@@ -1,119 +1,130 @@
-//projeto Irrigação PI_V
 
-// Bibliotecas
+// Projeto PI VI- Sistema de irrigação automático
 
+// Inclusão de bibliotecasa necessárias
 #include <Wire.h>
-#include <LiquidCrystal_I2C.h> // biblioteca para o cristal líquido
+#include <LiquidCrystal_I2C.h>
+#include <Adafruit_PCF8574.h>
 
-//Pinos de controle Mux 
+
+
+#define PCF8574_ADDRESS 0x20 // endereço do PCF857 que controla os relés
+#define RELAY_ON 1
+#define RELAY_OFF 0
+
+Adafruit_PCF8574 pcf;
+
+// Definições dos pinos de controle do Mux
 #define PinS0  D5
 #define PinS1  D6
 #define PinS2  D7
 #define PinS3  D8
 #define PinSIG A0
-#define endereco 0x27 //Endereços comuns : 0x27, 0x3F
+
+#define endereco 0x27 // Endereço I2C do LCD
 #define colunas 16
 #define linhas 2
 
-LiquidCrystal_I2C lcd(endereco, colunas, linhas); //Instanciando o Lcd
+LiquidCrystal_I2C lcd(endereco, colunas, linhas); // Instanciando o LCD
 int mix[4] = {PinS0, PinS1, PinS2, PinS3};
+// Array para armazenar os valores lidos dos sensores
+int valores_analogicos[8];
 
-// variáveis globais
-int umidade;
+// Valores dos pinos de controle do Mux para cada canal
+const byte muxChannel[8][4] = {
+  // S0, S1, S2, S3
+  {0, 0, 0, 0}, // Canal 0
+  {1, 0, 0, 0}, // Canal 1
+  {0, 1, 0, 0}, // Canal 2
+  {1, 1, 0, 0}, // Canal 3
+  {0, 0, 1, 0}, // Canal 4
+  {1, 0, 1, 0}, // Canal 5
+  {0, 1, 1, 0}, // Canal 6
+  {1, 1, 1, 0}  // Canal 7
+   /* caso tenha mais sensores pode lê mais 8
+  { 0 , 0 , 0 , 1 } ,  //canal 8 
+  { 1 , 0 , 0 , 1 } ,  //canal 9 
+  { 0 , 1 , 0 , 1 } ,  //canal 10 
+  { 1 , 1 , 0 , 1 } ,  //canal 11 
+  { 0 , 0 , 1 , 1 } ,  //canal 12 
+  { 1 , 0 , 1 , 1 } ,  //canal 13 
+  { 0 , 1 , 1 , 1 } ,  //canal 14 
+  { 1 , 1 , 1 , 1 } ,  //canal 15 */
+};
 
-int valores_analogicos[16];
-
-// valores em binário
-
-  byte muxChannel [ 16 ] [ 4 ] = { 
-    //S0, S1, S2, S3    Canais
-    { 0 , 0 , 0 , 0 } ,  //canal 0 
-    { 1 , 0 , 0 , 0 } ,  //canal 1 
-    { 0 , 1 , 0 , 0 } ,  // canal 2 
-    { 1 , 1 , 0 , 0 } ,  //canal 3 
-    { 0 , 0 , 1 , 0 } ,  //canal 4 
-    { 1 , 0 , 1 , 0 } ,  //canal 5 
-    { 0 , 1 , 1 , 0 } ,  //canal 6 
-    { 1 , 1 , 1 , 0 } ,  //canal 7 
-    { 0 , 0 , 0 , 1 } ,  //canal 8 
-    { 1 , 0 , 0 , 1 } ,  //canal 9 
-    { 0 , 1 , 0 , 1 } ,  //canal 10 
-    { 1 , 1 , 0 , 1 } ,  //canal 11 
-    { 0 , 0 , 1 , 1 } ,  //canal 12 
-    { 1 , 0 , 1 , 1 } ,  //canal 13 
-    { 0 , 1 , 1 , 1 } ,  //canal 14 
-    { 1 , 1 , 1 , 1 } ,  //canal 15 
-  } ;
-
-// Função de leitura
-
-void multiplex(){
-
-  for (int x=0; x<=2; x++ ){
-
-    for(int y=0; y<=3; y++){
-      digitalWrite (mix[y], muxChannel[x][y]);
+// Função para ler os valores dos sensores através do multiplexador
+void multiplex() {
+  for (int x = 0; x < 8; x++) {
+    for (int y = 0; y < 4; y++) {
+      digitalWrite(mix[y], muxChannel[x][y]);
     }
-  valores_analogicos[x] = analogRead(PinSIG);
-  valores_analogicos[x] =map(valores_analogicos[x], 0, 1023, 0, 100);
-  valores_analogicos[x]=(100-valores_analogicos[x]);
+    valores_analogicos[x] = analogRead(PinSIG);
+    valores_analogicos[x] = map(valores_analogicos[x], 0, 1023, 0, 100);
+    valores_analogicos[x] =(100-valores_analogicos[x]);
   }
 }
-void setup ( ) { 
-  pinMode ( PinS0,  OUTPUT );  
-  pinMode ( PinS1,  OUTPUT );  
-  pinMode ( PinS2,  OUTPUT );  
-  pinMode ( PinS3,  OUTPUT );
-  pinMode ( PinSIG, INPUT );
 
-  digitalWrite ( PinS0 ,  LOW ); 
-  digitalWrite ( PinS1 ,  LOW ); 
-  digitalWrite ( PinS2 ,  LOW ); 
-  digitalWrite ( PinS3 ,  LOW );
+void setup() {
+  pinMode(PinS0, OUTPUT);
+  pinMode(PinS1, OUTPUT);
+  pinMode(PinS2, OUTPUT);
+  pinMode(PinS3, OUTPUT);
+  pinMode(PinSIG, INPUT);
 
-  
-  Wire.begin(); 
-  
-  Serial.begin (9600);   // inicia comunicação Serial
-  lcd.init(); // INICIA A COMUNICAÇÃO COM O DISPLAY
-  lcd.backlight(); // LIGA A ILUMINAÇÃO DO DISPLAY
-  lcd.clear(); // LIMPA O DISPLAY
+  Wire.begin();
 
-  
-}
+  Serial.begin(9600);
 
-
-void loop ( ) {
-
-multiplex();
-
-  for (int x = 0; x <= 5; x++) {
-
-Serial.print("canal");
-Serial.print(" ");
-Serial.print(x);
-Serial.print ("= ");
-Serial.print(valores_analogicos[x]);
-Serial.print("%");
-Serial.println("");
-delay(1000);
-
-
-lcd.setCursor(0, 0); // POSICIONA O CURSOR NA PRIMEIRA COLUNA DA LINHA 1
-lcd.print("Canal");
-lcd.setCursor(5, 0); // POSICIONA O CURSOR NA PRIMEIRA COLUNA DA LINHA 5
-lcd.print("-");
-lcd.setCursor(6, 0); // POSICIONA O CURSOR NA PRIMEIRA COLUNA DA LINHA 6
-lcd.print(x);
-lcd.setCursor(7, 0); // POSICIONA O CURSOR NA PRIMEIRA COLUNA DA LINHA 7
-lcd.print("=");
-lcd.setCursor(8, 0); // POSICIONA O CURSOR NA PRIMEIRA COLUNA DA LINHA 8
-lcd.print(valores_analogicos[x]);
-lcd.setCursor(10, 0); // POSICIONA O CURSOR NA PRIMEIRA COLUNA DA LINHA 10
-lcd.print("%");
-delay(1000);
-  
+  if (!pcf.begin()) {
+    Serial.println("Falha ao encontrar o PCF8574");
+    while (1);
   }
 
+  lcd.init();
+  lcd.backlight();
+  lcd.clear();
 
+  // Configura todos os pinos do PCF8574 como saída
+  for (int i = 0; i < 8; i++) {
+    pcf.pinMode(i, OUTPUT);
+  }
+}
+
+void loop() {
+ multiplex();
+
+ 
+
+  for (int x = 0; x < 8; x++) {
+    Serial.print("Sensor_");
+    Serial.print(x);
+    Serial.print(" = ");
+    Serial.print(valores_analogicos[x]);
+    Serial.println("%");
+    
+    // Envia dados para o Lcd
+    lcd.setCursor(0, 0);
+    lcd.print("Sensor_");
+    lcd.print(x);
+    lcd.print("=");
+    lcd.print(" ");
+    lcd.setCursor(0,10);
+    lcd.print(valores_analogicos[x]);
+    lcd.print("%");
+    lcd.setCursor(0, 1);
+    lcd.print("Rele_");
+    lcd.print(x);
+    lcd.print(":");
+    lcd.print(" ");
+    // Controla o relé baseado na leitura do sensor
+    if (valores_analogicos[x] < 45) {
+      pcf.digitalWrite(x, RELAY_ON);// liga o relé com low
+      lcd.print("L"); // LIGADO para Ligado
+    } else if (valores_analogicos[x] >= 60) {
+      pcf.digitalWrite(x, RELAY_OFF);//Desliga o relé com High
+      lcd.print("D"); //DESLIGADO para Desligado
+    }
+
+    delay(1000);
+  }
 }

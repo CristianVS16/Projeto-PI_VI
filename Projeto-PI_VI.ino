@@ -16,8 +16,8 @@
 #include <BlynkSimpleEsp8266.h>
 
 char auth[] = BLYNK_AUTH_TOKEN;  //Insira seu Blynk Auth token
-char ssid[] = "Yasmin";  //Insira seu WIFI SSID
-char pass[] = "248905822";  //insira seu WIFI Password
+char ssid[] = "xxxxxx";  //Insira seu WIFI SSID
+char pass[] = "xxxxxxx";  //insira seu WIFI Password
 
 BlynkTimer timer;
 
